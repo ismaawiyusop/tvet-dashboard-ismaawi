@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TVET Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+      background: #f0f2f5;
+      color: #1f2328;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #1e3a5f;
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    header .logo {
+      width: 40px; height: 40px;
+      background: #3b82d4;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; color: #fff;
+    }
+    header h1 { font-size: 20px; font-weight: 600; letter-spacing: 0.3px; }
+    header p  { font-size: 12px; color: #a8c4e0; margin-top: 2px; }
+    header .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    header .badge {
+      background: #3b82d4;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .edit-toggle {
+      background: #fff;
+      color: #1e3a5f;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .edit-toggle:hover { background: #dbeafe; }
+    .edit-toggle.active { background: #22c55e; color: #fff; }
+
+    /* ── Layout ── */
+    main { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
+    .section-title {
+      font-size: 13px; font-weight: 600; color: #57606a;
+      text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px;
+    }
+
+    /* ── Editable hint ── */
+    .edit-hint {
+      display: none;
+      background: #dbeafe;
+      border: 1px solid #93c5fd;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: #1e40af;
+      margin-bottom: 18px;
+    }
+    body.editing .edit-hint { display: block; }
+
+    /* ── Editable fields ── */
+    [contenteditable="true"] {
+      outline: none;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    body.editing [contenteditable="true"] {
+      background: #fffbeb;
+      box-shadow: 0 0 0 1.5px #f59e0b;
+      padding: 1px 4px;
+      cursor: text;
+    }
+
+    /* ── Summary Cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 22px;
+      border: 1px solid #e5e7eb;
+      display: flex; flex-direction: column; gap: 6px;
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      cursor: default;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.09);
+    }
+    .card .card-icon {
+      width: 38px; height: 38px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; margin-bottom: 4px;
+    }
+    .card-blue  { background: #dbeafe; }
+    .card-green { background: #dcfce7; }
+    .card-amber { background: #fef9c3; }
+    .card .card-label { font-size: 12px; color: #57606a; font-weight: 500; }
+    .card .card-value { font-size: 28px; font-weight: 700; color: #1f2328; line-height: 1; }
+    .card .card-sub   { font-size: 12px; color: #57606a; margin-top: 2px; }
+    .card .pill {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; margin-top: 4px;
+    }
+    .pill-green { background: #dcfce7; color: #166534; }
+    .pill-amber { background: #fef9c3; color: #854d0e; }
+    .pill-blue  { background: #dbeafe; color: #1e40af; }
+
+    /* ── Bottom Grid ── */
+    .bottom-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .panel { background: #fff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; }
+    .panel-header {
+      padding: 14px 18px; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-header h2 { font-size: 14px; font-weight: 600; }
+    .panel-header span { font-size: 11px; color: #57606a; }
+    .panel-body { padding: 14px 18px; }
+
+    /* ── Add buttons (edit mode only) ── */
+    .add-btn {
+      display: none;
+      width: 100%;
+      margin-top: 10px;
+      padding: 7px;
+      background: #f7f8fa;
+      border: 1.5px dashed #c5ccd6;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #57606a;
+      cursor: pointer;
+      text-align: center;
+    }
+    .add-btn:hover { background: #dbeafe; border-color: #3b82d4; color: #1e40af; }
+    body.editing .add-btn { display: block; }
+
+    /* ── Delete buttons (edit mode only) ── */
+    .del-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: #ef4444;
+      font-size: 14px;
+      cursor: pointer;
+      padding: 0 2px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    body.editing .del-btn { display: inline-flex; align-items: center; }
+
+    /* ── Task Status ── */
+    .task-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 0; border-bottom: 1px solid #f0f2f5; font-size: 13px;
+      transition: background 0.2s;
+      border-radius: 6px;
+    }
+    .task-item:hover { background: #f7f8fa; }
+    .task-item:last-child { border-bottom: none; }
+    .task-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .dot-done    { background: #22c55e; }
+    .dot-ongoing { background: #3b82f6; }
+    .dot-pending { background: #f59e0b; }
+    .dot-overdue { background: #ef4444; }
+    .task-name { flex: 1; color: #1f2328; }
+    .task-name.done { text-decoration: line-through; color: #57606a; }
+    .task-tag {
+      font-size: 10px; font-weight: 600;
+      padding: 2px 7px; border-radius: 20px;
+    }
+    .tag-done    { background: #dcfce7; color: #166534; }
+    .tag-ongoing { background: #dbeafe; color: #1e40af; }
+    .tag-pending { background: #fef9c3; color: #854d0e; }
+    .tag-overdue { background: #fee2e2; color: #991b1b; }
+    /* status select in edit mode */
+    .status-select {
+      display: none;
+      font-size: 10px; font-weight: 600;
+      padding: 2px 4px; border-radius: 6px;
+      border: 1px solid #e5e7eb; background: #f7f8fa;
+      cursor: pointer;
+    }
+    body.editing .status-select { display: inline-block; }
+    body.editing .task-tag { display: none; }
+
+    /* ── Workshop Status ── */
+    .workshop-item { padding: 10px 0; border-bottom: 1px solid #f0f2f5; font-size: 13px; }
+    .workshop-item:last-child { border-bottom: none; }
+    .workshop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+    .workshop-name { font-weight: 500; }
+    .workshop-pct  { font-size: 12px; font-weight: 700; color: #3b82d4; }
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+    .fill-blue  { background: #3b82d4; }
+    .fill-green { background: #22c55e; }
+    .fill-amber { background: #f59e0b; }
+    /* range slider in edit mode */
+    .pct-slider {
+      display: none;
+      width: 100%;
+      margin-top: 6px;
+      accent-color: #3b82d4;
+    }
+    body.editing .pct-slider { display: block; }
+
+    /* ── Checklist ── */
+    .checklist-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid #f0f2f5; font-size: 13px;
+    }
+    .checklist-item:last-child { border-bottom: none; }
+    .checklist-item input[type="checkbox"] {
+      width: 15px; height: 15px; margin-top: 1px;
+      accent-color: #3b82d4; cursor: pointer; flex-shrink: 0;
+    }
+    .checklist-item label { cursor: pointer; color: #1f2328; line-height: 1.4; flex: 1; }
+    .checklist-item input:checked + label { text-decoration: line-through; color: #57606a; }
+    .checklist-cat {
+      font-size: 10px; font-weight: 700; color: #57606a;
+      text-transform: uppercase; letter-spacing: 0.7px; margin: 10px 0 4px;
+    }
+    .checklist-cat:first-child { margin-top: 0; }
+
+    /* ── Toast notification ── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1e3a5f; color: #fff; padding: 9px 20px;
+      border-radius: 20px; font-size: 12px; font-weight: 500;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 999; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Profile avatar ── */
+    .avatar-wrap {
+      position: relative;
+      width: 40px; height: 40px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .avatar-wrap img, .avatar-wrap .avatar-init {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(255,255,255,0.35);
+      display: block;
+    }
+    .avatar-wrap .avatar-init {
+      background: #3b82d4;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 700; color: #fff;
+      letter-spacing: 0.5px;
+    }
+    .avatar-overlay {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0;
+      transition: opacity 0.18s;
+      font-size: 16px;
+    }
+    .avatar-wrap:hover .avatar-overlay { opacity: 1; }
+    #avatar-input { display: none; }
+
+    /* ── Checklist ring ── */
+    .cl-ring-wrap { display: flex; align-items: center; gap: 8px; }
+    .cl-ring { width: 32px; height: 32px; flex-shrink: 0; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center; font-size: 11px; color: #57606a;
+      padding: 28px 0 18px; border-top: 1px solid #e5e7eb; margin-top: 32px;
+    }
+
+    @media (max-width: 768px) {
+      .cards       { grid-template-columns: 1fr; }
+      .bottom-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">T</div>
+    <div>
+      <h1 contenteditable="false" id="hdr-title">TVET Dashboard</h1>
+      <p contenteditable="false" id="hdr-sub">Technical &amp; Vocational Education Training — Overview</p>
+    </div>
+    <div class="header-right">
+      <span class="badge" contenteditable="false" id="hdr-badge">2025 Intake</span>
+      <div class="avatar-wrap" onclick="document.getElementById('avatar-input').click()" title="Klik untuk tukar gambar profil">
+        <div class="avatar-init" id="avatar-init">U</div>
+        <img id="avatar-img" src="" alt="Profile" style="display:none;" />
+        <div class="avatar-overlay">📷</div>
+      </div>
+      <input type="file" id="avatar-input" accept="image/*" onchange="loadAvatar(this)" />
+      <button class="edit-toggle" id="editBtn" onclick="toggleEdit()">✏️ Edit</button>
+    </div>
+  </header>
+
+  <main>
+
+    <div class="edit-hint">✏️ <strong>Edit Mode ON</strong> — Klik pada teks kuning untuk ubah. Guna slider untuk tukar peratusan workshop. Klik <strong>+ Tambah</strong> untuk tambah item baru.</div>
+
+    <!-- Summary Cards -->
+    <p class="section-title">Overview</p>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-icon card-blue">📚</div>
+        <div class="card-label" contenteditable="false">Total Trainees</div>
+        <div class="card-value" contenteditable="false">128</div>
+        <div class="card-sub"  contenteditable="false">Across 4 programmes</div>
+        <span class="pill pill-blue" contenteditable="false">+12 this month</span>
+      </div>
+
+      <div class="card">
+        <div class="card-icon card-green">✅</div>
+        <div class="card-label" contenteditable="false">Tasks Completed</div>
+        <div class="card-value" contenteditable="false">47</div>
+        <div class="card-sub"  contenteditable="false">Out of 60 assigned</div>
+        <span class="pill pill-green" contenteditable="false">78% done</span>
+      </div>
+
+      <div class="card">
+        <div class="card-icon card-amber">🏭</div>
+        <div class="card-label" contenteditable="false">Active Workshops</div>
+        <div class="card-value" contenteditable="false">6</div>
+        <div class="card-sub"  contenteditable="false">2 completing this week</div>
+        <span class="pill pill-amber" contenteditable="false">On schedule</span>
+      </div>
+
+    </div>
+
+    <!-- Bottom Grid -->
+    <p class="section-title">Details</p>
+    <div class="bottom-grid">
+
+      <!-- Task Status -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>📋 Task Status</h2>
+          <span id="task-count">6 tasks</span>
+        </div>
+        <div class="panel-body">
+          <div id="task-list">
+
+            <div class="task-item">
+              <div class="task-dot dot-done"></div>
+              <span class="task-name done" contenteditable="false">Submit Safety Report</span>
+              <select class="status-select" onchange="changeTaskStatus(this)">
+                <option value="done" selected>Done</option>
+                <option value="ongoing">In Progress</option>
+                <option value="pending">Pending</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <span class="task-tag tag-done">Done</span>
+              <button class="del-btn" onclick="delItem(this, 'task-list', 'task-count', 'tasks')">✕</button>
+            </div>
+
+            <div class="task-item">
+              <div class="task-dot dot-ongoing"></div>
+              <span class="task-name" contenteditable="false">CNC Machine Assessment</span>
+              <select class="status-select" onchange="changeTaskStatus(this)">
+                <option value="done">Done</option>
+                <option value="ongoing" selected>In Progress</option>
+                <option value="pending">Pending</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <span class="task-tag tag-ongoing">In Progress</span>
+              <button class="del-btn" onclick="delItem(this, 'task-list', 'task-count', 'tasks')">✕</button>
+            </div>
+
+            <div class="task-item">
+              <div class="task-dot dot-done"></div>
+              <span class="task-name done" contenteditable="false">Attendance Log — Week 3</span>
+              <select class="status-select" onchange="changeTaskStatus(this)">
+                <option value="done" selected>Done</option>
+                <option value="ongoing">In Progress</option>
+                <option value="pending">Pending</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <span class="task-tag tag-done">Done</span>
+              <button class="del-btn" onclick="delItem(this, 'task-list', 'task-count', 'tasks')">✕</button>
+            </div>
+
+            <div class="task-item">
+              <div class="task-dot dot-pending"></div>
+              <span class="task-name" contenteditable="false">Practical Exam — Welding</span>
+              <select class="status-select" onchange="changeTaskStatus(this)">
+                <option value="done">Done</option>
+                <option value="ongoing">In Progress</option>
+                <option value="pending" selected>Pending</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <span class="task-tag tag-pending">Pending</span>
+              <button class="del-btn" onclick="delItem(this, 'task-list', 'task-count', 'tasks')">✕</button>
+            </div>
+
+            <div class="task-item">
+              <div class="task-dot dot-overdue"></div>
+              <span class="task-name" contenteditable="false">Equipment Inspection Form</span>
+              <select class="status-select" onchange="changeTaskStatus(this)">
+                <option value="done">Done</option>
+                <option value="ongoing">In Progress</option>
+                <option value="pending">Pending</option>
+                <option value="overdue" selected>Overdue</option>
+              </select>
+              <span class="task-tag tag-overdue">Overdue</span>
+              <button class="del-btn" onclick="delItem(this, 'task-list', 'task-count', 'tasks')">✕</button>
+            </div>
+
+            <div class="task-item">
+              <div class="task-dot dot-ongoing"></div>
+              <span class="task-name" contenteditable="false">Competency Portfolio Upload</span>
+              <select class="status-select" onchange="changeTaskStatus(this)">
+                <option value="done">Done</option>
+                <option value="ongoing" selected>In Progress</option>
+                <option value="pending">Pending</option>
+                <option value="overdue">Overdue</option>
+              </select>
+              <span class="task-tag tag-ongoing">In Progress</span>
+              <button class="del-btn" onclick="delItem(this, 'task-list', 'task-count', 'tasks')">✕</button>
+            </div>
+
+          </div>
+          <button class="add-btn" onclick="addTask()">+ Tambah Tugasan</button>
+        </div>
+      </div>
+
+      <!-- Workshop Status -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>🏭 Workshop Status</h2>
+          <span id="ws-count">6 active</span>
+        </div>
+        <div class="panel-body">
+          <div id="ws-list">
+
+            <div class="workshop-item">
+              <div class="workshop-row">
+                <span class="workshop-name" contenteditable="false">Automotive Technology</span>
+                <span class="workshop-pct">92%</span>
+                <button class="del-btn" onclick="delItem(this, 'ws-list', 'ws-count', 'active')">✕</button>
+              </div>
+              <div class="progress-bar"><div class="progress-fill fill-green" style="width:92%"></div></div>
+              <input type="range" class="pct-slider" min="0" max="100" value="92" oninput="updatePct(this)">
+            </div>
+
+            <div class="workshop-item">
+              <div class="workshop-row">
+                <span class="workshop-name" contenteditable="false">Electrical Installation</span>
+                <span class="workshop-pct">75%</span>
+                <button class="del-btn" onclick="delItem(this, 'ws-list', 'ws-count', 'active')">✕</button>
+              </div>
+              <div class="progress-bar"><div class="progress-fill fill-blue" style="width:75%"></div></div>
+              <input type="range" class="pct-slider" min="0" max="100" value="75" oninput="updatePct(this)">
+            </div>
+
+            <div class="workshop-item">
+              <div class="workshop-row">
+                <span class="workshop-name" contenteditable="false">Welding &amp; Fabrication</span>
+                <span class="workshop-pct">60%</span>
+                <button class="del-btn" onclick="delItem(this, 'ws-list', 'ws-count', 'active')">✕</button>
+              </div>
+              <div class="progress-bar"><div class="progress-fill fill-blue" style="width:60%"></div></div>
+              <input type="range" class="pct-slider" min="0" max="100" value="60" oninput="updatePct(this)">
+            </div>
+
+            <div class="workshop-item">
+              <div class="workshop-row">
+                <span class="workshop-name" contenteditable="false">Refrigeration &amp; AC</span>
+                <span class="workshop-pct">45%</span>
+                <button class="del-btn" onclick="delItem(this, 'ws-list', 'ws-count', 'active')">✕</button>
+              </div>
+              <div class="progress-bar"><div class="progress-fill fill-amber" style="width:45%"></div></div>
+              <input type="range" class="pct-slider" min="0" max="100" value="45" oninput="updatePct(this)">
+            </div>
+
+            <div class="workshop-item">
+              <div class="workshop-row">
+                <span class="workshop-name" contenteditable="false">ICT Networking</span>
+                <span class="workshop-pct">80%</span>
+                <button class="del-btn" onclick="delItem(this, 'ws-list', 'ws-count', 'active')">✕</button>
+              </div>
+              <div class="progress-bar"><div class="progress-fill fill-green" style="width:80%"></div></div>
+              <input type="range" class="pct-slider" min="0" max="100" value="80" oninput="updatePct(this)">
+            </div>
+
+            <div class="workshop-item">
+              <div class="workshop-row">
+                <span class="workshop-name" contenteditable="false">CNC Machining</span>
+                <span class="workshop-pct">30%</span>
+                <button class="del-btn" onclick="delItem(this, 'ws-list', 'ws-count', 'active')">✕</button>
+              </div>
+              <div class="progress-bar"><div class="progress-fill fill-amber" style="width:30%"></div></div>
+              <input type="range" class="pct-slider" min="0" max="100" value="30" oninput="updatePct(this)">
+            </div>
+
+          </div>
+          <button class="add-btn" onclick="addWorkshop()">+ Tambah Workshop</button>
+        </div>
+      </div>
+
+      <!-- Checklist -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>☑️ Checklist</h2>
+          <div class="cl-ring-wrap">
+            <svg class="cl-ring" viewBox="0 0 32 32">
+              <circle cx="16" cy="16" r="13" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+              <circle id="cl-ring-fill" cx="16" cy="16" r="13" fill="none" stroke="#22c55e" stroke-width="3"
+                stroke-dasharray="81.68" stroke-dashoffset="81.68"
+                stroke-linecap="round" transform="rotate(-90 16 16)"
+                style="transition: stroke-dashoffset 0.5s ease;"/>
+            </svg>
+            <span contenteditable="false" id="cl-title">Trainer Prep</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="cl-list">
+
+            <div class="checklist-cat" contenteditable="false">Pre-Workshop</div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c1" checked />
+              <label for="c1" contenteditable="false">Prepare workshop materials &amp; tools</label>
+              <button class="del-btn" onclick="delItem(this)">✕</button>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c2" checked />
+              <label for="c2" contenteditable="false">Verify PPE availability for all trainees</label>
+              <button class="del-btn" onclick="delItem(this)">✕</button>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c3" />
+              <label for="c3" contenteditable="false">Conduct safety briefing session</label>
+              <button class="del-btn" onclick="delItem(this)">✕</button>
+            </div>
+
+            <div class="checklist-cat" contenteditable="false">During Workshop</div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c4" />
+              <label for="c4" contenteditable="false">Record trainee attendance</label>
+              <button class="del-btn" onclick="delItem(this)">✕</button>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c5" />
+              <label for="c5" contenteditable="false">Monitor practical assessment progress</label>
+              <button class="del-btn" onclick="delItem(this)">✕</button>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c6" />
+              <label for="c6" contenteditable="false">Document competency sign-offs</label>
+              <button class="del-btn" onclick="delItem(this)">✕</button>
+            </div>
+
+            <div class="checklist-cat" contenteditable="false">Post-Workshop</div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c7" />
+              <label for="c7" contenteditable="false">Submit trainer evaluation report</label>
+              <button class="del-btn" onclick="delItem(this)">✕</button>
+            </div>
+            <div class="checklist-item">
+              <input type="checkbox" id="c8" />
+              <label for="c8" contenteditable="false">Update trainee competency records</label>
+              <button class="del-btn" onclick="delItem(this)">✕</button>
+            </div>
+
+          </div>
+          <button class="add-btn" onclick="addChecklist()">+ Tambah Item</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="toast"></div>
+  <footer>Made with IBM Bob</footer>
+
+  <script>
+    // ── Avatar upload ──
+    function loadAvatar(input) {
+      if (!input.files || !input.files[0]) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img  = document.getElementById('avatar-img');
+        const init = document.getElementById('avatar-init');
+        img.src = e.target.result;
+        img.style.display = 'block';
+        init.style.display = 'none';
+        // persist in sessionStorage so refresh keeps it
+        try { sessionStorage.setItem('avatar', e.target.result); } catch(_) {}
+        showToast('🖼️ Gambar profil dikemas kini');
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+
+    // ── Toast ──
+    let toastTimer;
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    // ── Toggle Edit Mode ──
+    function toggleEdit() {
+      const editing = document.body.classList.toggle('editing');
+      const btn = document.getElementById('editBtn');
+      btn.textContent = editing ? '✅ Selesai' : '✏️ Edit';
+      btn.classList.toggle('active', editing);
+      document.querySelectorAll('[contenteditable]').forEach(el => {
+        el.contentEditable = editing ? 'true' : 'false';
+      });
+      showToast(editing ? '✏️ Edit mode aktif' : '✅ Perubahan disimpan');
+    }
+
+    // ── Workshop percentage slider ──
+    function updatePct(slider) {
+      const val = slider.value;
+      const item = slider.closest('.workshop-item');
+      item.querySelector('.workshop-pct').textContent = val + '%';
+      const fill = item.querySelector('.progress-fill');
+      fill.style.width = val + '%';
+      fill.className = 'progress-fill ' + (val >= 70 ? 'fill-green' : val >= 40 ? 'fill-blue' : 'fill-amber');
+    }
+
+    // ── Task status change ──
+    function changeTaskStatus(sel) {
+      const item = sel.closest('.task-item');
+      const dot  = item.querySelector('.task-dot');
+      const tag  = item.querySelector('.task-tag');
+      const name = item.querySelector('.task-name');
+      const map = {
+        done:    { dot: 'dot-done',    tag: 'tag-done',    label: 'Done',        strike: true  },
+        ongoing: { dot: 'dot-ongoing', tag: 'tag-ongoing', label: 'In Progress', strike: false },
+        pending: { dot: 'dot-pending', tag: 'tag-pending', label: 'Pending',     strike: false },
+        overdue: { dot: 'dot-overdue', tag: 'tag-overdue', label: 'Overdue',     strike: false },
+      };
+      const m = map[sel.value];
+      dot.className   = 'task-dot ' + m.dot;
+      tag.className   = 'task-tag ' + m.tag;
+      tag.textContent = m.label;
+      name.classList.toggle('done', m.strike);
+      // flash highlight
+      item.style.background = '#fffbeb';
+      setTimeout(() => { item.style.background = ''; }, 500);
+      updateTaskCount();
+    }
+
+    // ── Delete any item ──
+    function delItem(btn, listId, countId, unit) {
+      const el = btn.closest('.task-item, .workshop-item, .checklist-item');
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(10px)';
+      el.style.transition = 'opacity 0.2s, transform 0.2s';
+      setTimeout(() => {
+        el.remove();
+        if (listId) updateCount(listId, countId, unit);
+        updateClRing();
+        showToast('🗑️ Item dipadam');
+      }, 210);
+    }
+
+    // ── Count helpers ──
+    function updateCount(listId, countId, unit) {
+      if (!listId || !countId) return;
+      const n = document.getElementById(listId).querySelectorAll(
+        listId === 'task-list' ? '.task-item' :
+        listId === 'ws-list'   ? '.workshop-item' : '.checklist-item'
+      ).length;
+      document.getElementById(countId).textContent = n + ' ' + unit;
+    }
+    function updateTaskCount() {
+      updateCount('task-list', 'task-count', 'tasks');
+    }
+
+    // ── Checklist progress ring ──
+    function updateClRing() {
+      const items   = document.querySelectorAll('#cl-list .checklist-item input[type="checkbox"]');
+      const checked = document.querySelectorAll('#cl-list .checklist-item input[type="checkbox"]:checked');
+      const pct     = items.length ? checked.length / items.length : 0;
+      const circ    = 2 * Math.PI * 13; // r=13 → ~81.68
+      const offset  = circ * (1 - pct);
+      const ring    = document.getElementById('cl-ring-fill');
+      if (ring) ring.style.strokeDashoffset = offset;
+    }
+
+    // ── Add Task ──
+    let taskIdx = 100;
+    function addTask() {
+      taskIdx++;
+      const html = `
+        <div class="task-item" style="opacity:0;transform:translateY(-6px);transition:opacity 0.25s,transform 0.25s">
+          <div class="task-dot dot-pending"></div>
+          <span class="task-name" contenteditable="true">Tugasan Baru</span>
+          <select class="status-select" onchange="changeTaskStatus(this)">
+            <option value="done">Done</option>
+            <option value="ongoing">In Progress</option>
+            <option value="pending" selected>Pending</option>
+            <option value="overdue">Overdue</option>
+          </select>
+          <span class="task-tag tag-pending">Pending</span>
+          <button class="del-btn" onclick="delItem(this,'task-list','task-count','tasks')">✕</button>
+        </div>`;
+      document.getElementById('task-list').insertAdjacentHTML('beforeend', html);
+      updateTaskCount();
+      const items = document.querySelectorAll('#task-list .task-item');
+      const newItem = items[items.length - 1];
+      requestAnimationFrame(() => {
+        newItem.style.opacity = '1';
+        newItem.style.transform = 'translateY(0)';
+      });
+      newItem.querySelector('.task-name').focus();
+      showToast('✅ Tugasan baru ditambah');
+    }
+
+    // ── Add Workshop ──
+    function addWorkshop() {
+      const html = `
+        <div class="workshop-item" style="opacity:0;transition:opacity 0.25s">
+          <div class="workshop-row">
+            <span class="workshop-name" contenteditable="true">Workshop Baru</span>
+            <span class="workshop-pct">50%</span>
+            <button class="del-btn" onclick="delItem(this,'ws-list','ws-count','active')">✕</button>
+          </div>
+          <div class="progress-bar"><div class="progress-fill fill-blue" style="width:0%"></div></div>
+          <input type="range" class="pct-slider" min="0" max="100" value="50" oninput="updatePct(this)">
+        </div>`;
+      document.getElementById('ws-list').insertAdjacentHTML('beforeend', html);
+      updateCount('ws-list', 'ws-count', 'active');
+      const items = document.querySelectorAll('#ws-list .workshop-item');
+      const newItem = items[items.length - 1];
+      requestAnimationFrame(() => {
+        newItem.style.opacity = '1';
+        // animate bar to 50%
+        setTimeout(() => { newItem.querySelector('.progress-fill').style.width = '50%'; }, 50);
+      });
+      newItem.querySelector('.workshop-name').focus();
+      showToast('🏭 Workshop baru ditambah');
+    }
+
+    // ── Add Checklist Item ──
+    let clIdx = 200;
+    function addChecklist() {
+      clIdx++;
+      const id = 'cx' + clIdx;
+      const html = `
+        <div class="checklist-item" style="opacity:0;transition:opacity 0.25s">
+          <input type="checkbox" id="${id}" />
+          <label for="${id}" contenteditable="true">Item Baru</label>
+          <button class="del-btn" onclick="delItem(this)">✕</button>
+        </div>`;
+      document.getElementById('cl-list').insertAdjacentHTML('beforeend', html);
+      const labels  = document.querySelectorAll('#cl-list label');
+      const newItem = labels[labels.length - 1].closest('.checklist-item');
+      requestAnimationFrame(() => { newItem.style.opacity = '1'; });
+      // wire up ring update
+      newItem.querySelector('input').addEventListener('change', updateClRing);
+      labels[labels.length - 1].focus();
+      showToast('☑️ Item checklist ditambah');
+    }
+
+    // ── Init: animate progress bars & card values on load ──
+    window.addEventListener('DOMContentLoaded', () => {
+      // Animate progress bars from 0
+      document.querySelectorAll('.progress-fill').forEach(fill => {
+        const target = fill.style.width;
+        fill.style.width = '0%';
+        setTimeout(() => { fill.style.width = target; }, 120);
+      });
+
+      // Count-up animation for card values
+      document.querySelectorAll('.card-value').forEach(el => {
+        const target = parseInt(el.textContent, 10);
+        if (isNaN(target)) return;
+        let start = 0;
+        const dur = 900;
+        const step = 16;
+        const inc  = target / (dur / step);
+        const timer = setInterval(() => {
+          start = Math.min(start + inc, target);
+          el.textContent = Math.round(start);
+          if (start >= target) clearInterval(timer);
+        }, step);
+      });
+
+      // Restore avatar from sessionStorage
+      try {
+        const saved = sessionStorage.getItem('avatar');
+        if (saved) {
+          const img  = document.getElementById('avatar-img');
+          const init = document.getElementById('avatar-init');
+          img.src = saved;
+          img.style.display = 'block';
+          init.style.display = 'none';
+        }
+      } catch(_) {}
+
+      // Wire checklist ring to existing checkboxes
+      document.querySelectorAll('#cl-list input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', updateClRing);
+      });
+      updateClRing();
+    });
+  </script>
+
+</body>
+</html>
